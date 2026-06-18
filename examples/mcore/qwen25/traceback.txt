@@ -1,0 +1,20 @@
+INFO:megatron.core.optimizer_param_scheduler:> learning rate decay style: cosine
+ loading checkpoint from /home/zs/model_weights/qwen2.5_mcore/ at iteration 1
+could not load the checkpoint
+[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_01/model_optim_rng.pt'
+could not load the checkpoint
+[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_01/model_optim_rng.pt'
+could not load the checkpoint
+[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_00/model_optim_rng.pt'
+could not load the checkpoint
+[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_01/model_optim_rng.pt'
+could not load the checkpoint
+[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_00/model_optim_rng.pt'
+could not load the checkpoint
+[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_00/model_optim_rng.pt'
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
