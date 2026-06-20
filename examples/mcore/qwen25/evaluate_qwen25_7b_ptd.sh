@@ -1,22 +1,29 @@
 #!/bin/bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1
+source /usr/local/Ascend/cann/set_env.sh
+source /usr/local/Ascend/nnal/atb/set_env.sh
+export PYTHONPATH=/home/zs/MindSpeed:/home/zs/MindSpeed-LLM:$PYTHONPATH
+export HCCL_CONNECT_TIMEOUT=7200
 
-CHECKPOINT="Your ckpt file path"
-TOKENIZER_PATH="Your tokenizer path"
-DATA_PATH="./mmlu/test"
-TASK="mmlu"
+# 指定使用 2,3,4,5,14,15 这 6 张 NPU 卡
+export ASCEND_RT_VISIBLE_DEVICES=2,3,4,5,14,15
+
+CHECKPOINT="/home/zs/ckpt/qwen25-7b"
+TOKENIZER_PATH="/home/zs/model_from_hf/qwen2.5-7b-hf/"
+DATA_PATH="/home/zs/ckpt/qwen25-7b/mmlu_data/test"
+TASK="mmlu_ppl"
 
 # distributed config
 MASTER_ADDR=localhost
 MASTER_PORT=6000
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=8
+NPUS_PER_NODE=6
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
-TP=4
-PP=2
-SEQ_LENGTH=32768
+TP=2
+PP=1
+SEQ_LENGTH=4096
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -26,8 +33,11 @@ DISTRIBUTED_ARGS="
     --master_port $MASTER_PORT
 "
 
+mkdir -p /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs
+
 # Different task needs different max_new_tokens value, please follow the instruction in readme.
-torchrun $DISTRIBUTED_ARGS evaluation.py \
+cd /home/zs/MindSpeed-LLM
+python3.10 -m torch.distributed.run $DISTRIBUTED_ARGS evaluation.py \
        --use-mcore-models \
        --task ${TASK} \
        --task-data-path $DATA_PATH \
@@ -68,4 +78,4 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --no-load-rng \
        --no-load-optim \
        --transformer-impl local \
-       | tee logs/evaluation_mcore_qwen25_7b_${TASK}.log
+       | tee /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/evaluation_mcore_qwen25_7b_${TASK}.log

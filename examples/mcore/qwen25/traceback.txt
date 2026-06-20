@@ -1,20 +1,239 @@
-INFO:megatron.core.optimizer_param_scheduler:> learning rate decay style: cosine
- loading checkpoint from /home/zs/model_weights/qwen2.5_mcore/ at iteration 1
-could not load the checkpoint
-[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_01/model_optim_rng.pt'
-could not load the checkpoint
-[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_01/model_optim_rng.pt'
-could not load the checkpoint
-[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_00/model_optim_rng.pt'
-could not load the checkpoint
-[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_01/model_optim_rng.pt'
-could not load the checkpoint
-[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_00/model_optim_rng.pt'
-could not load the checkpoint
-[Errno 2] No such file or directory: '/home/zs/model_weights/qwen2.5_mcore/iter_0000001/mp_rank_00/model_optim_rng.pt'
+saving checkpoint at iteration      60 to /home/zs/ckpt/qwen25-7b-mean-bias in torch format
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/serialization.py", line 965, in save
+[rank1]:     _save(
+[rank1]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch_npu/utils/serialization.py", line 415, in _npu_save
+[rank1]:     zip_file.write_record(name, storage, num_bytes)
+[rank1]: RuntimeError: [enforce fail at inline_container.cc:857] . PytorchStreamWriter failed writing file data/0: file write failed
+
+[rank1]: During handling of the above exception, another exception occurred:
+
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 694, in <module>
+[rank1]:     main()
+[rank1]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 685, in main
+[rank1]:     pretrain(
+[rank1]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 494, in pretrain
+[rank1]:     iteration, num_floating_point_operations_so_far = train(
+[rank1]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 770, in train
+[rank1]:     save_checkpoint_and_time(iteration, model, optimizer,
+[rank1]:   File "/home/zs/MindSpeed-LLM/megatron/training/training.py", line 1656, in save_checkpoint_and_time
+[rank1]:     save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
+[rank1]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/checkpointing.py", line 186, in wrapper
+[rank1]:     optimizer.save_parameter_state(optim_checkpoint_name)
+[rank1]:   File "/home/zs/MindSpeed-LLM/megatron/core/optimizer/optimizer.py", line 1157, in save_parameter_state
+[rank1]:     self.chained_optimizers[0].save_parameter_state(filename)
+[rank1]:   File "/home/zs/MindSpeed-LLM/megatron/core/optimizer/distrib_optimizer.py", line 1059, in save_parameter_state
+[rank1]:     torch.save(state_dict, filename)
+[rank1]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch_npu/utils/serialization.py", line 432, in save
+[rank1]:     return torch.serialization.save(obj, f, pickle_module, pickle_protocol, True, _disable_byteorder_record)
+[rank1]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch_npu/profiler/_add_mstx_patch.py", line 50, in save_wrapper
+[rank1]:     out = func(*args, **kwargs)
+[rank1]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/serialization.py", line 964, in save
+[rank1]:     with _open_zipfile_writer(f) as opened_zipfile:
+[rank1]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/serialization.py", line 798, in __exit__
+[rank1]:     self.file_like.write_end_of_file()
+[rank1]: RuntimeError: [enforce fail at inline_container.cc:659] . unexpected pos 960 vs 854
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/serialization.py", line 965, in save
+[rank0]:     _save(
+[rank0]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch_npu/utils/serialization.py", line 415, in _npu_save
+[rank0]:     zip_file.write_record(name, storage, num_bytes)
+[rank0]: RuntimeError: [enforce fail at inline_container.cc:857] . PytorchStreamWriter failed writing file data/0: file write failed
+
+[rank0]: During handling of the above exception, another exception occurred:
+
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 694, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 685, in main
+[rank0]:     pretrain(
+[rank0]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 494, in pretrain
+[rank0]:     iteration, num_floating_point_operations_so_far = train(
+[rank0]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 770, in train
+[rank0]:     save_checkpoint_and_time(iteration, model, optimizer,
+[rank0]:   File "/home/zs/MindSpeed-LLM/megatron/training/training.py", line 1656, in save_checkpoint_and_time
+[rank0]:     save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
+[rank0]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/checkpointing.py", line 186, in wrapper
+[rank0]:     optimizer.save_parameter_state(optim_checkpoint_name)
+[rank0]:   File "/home/zs/MindSpeed-LLM/megatron/core/optimizer/optimizer.py", line 1157, in save_parameter_state
+[rank0]:     self.chained_optimizers[0].save_parameter_state(filename)
+[rank0]:   File "/home/zs/MindSpeed-LLM/megatron/core/optimizer/distrib_optimizer.py", line 1059, in save_parameter_state
+[rank0]:     torch.save(state_dict, filename)
+[rank0]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch_npu/utils/serialization.py", line 432, in save
+[rank0]:     return torch.serialization.save(obj, f, pickle_module, pickle_protocol, True, _disable_byteorder_record)
+[rank0]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch_npu/profiler/_add_mstx_patch.py", line 50, in save_wrapper
+[rank0]:     out = func(*args, **kwargs)
+[rank0]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/serialization.py", line 964, in save
+[rank0]:     with _open_zipfile_writer(f) as opened_zipfile:
+[rank0]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/serialization.py", line 798, in __exit__
+[rank0]:     self.file_like.write_end_of_file()
+[rank0]: RuntimeError: [enforce fail at inline_container.cc:659] . unexpected pos 960 vs 854
+[ERROR] 2026-06-20-12:38:55 (PID:29666, Device:0, RankID:-1) ERR99999 UNKNOWN applicaiton exception
+[ERROR] 2026-06-20-12:38:55 (PID:29667, Device:1, RankID:-1) ERR99999 UNKNOWN applicaiton exception
+[rank5]:[E620 12:38:56.115906610 ProcessGroupGloo.cpp:145] Rank 5 successfully reached monitoredBarrier, but received errors while waiting for send/recv from rank 0. Please check rank 0 logs for faulty rank.
+[rank4]:[E620 12:38:56.115953880 ProcessGroupGloo.cpp:145] Rank 4 successfully reached monitoredBarrier, but received errors while waiting for send/recv from rank 0. Please check rank 0 logs for faulty rank.
+[rank2]:[E620 12:38:56.115959890 ProcessGroupGloo.cpp:145] Rank 2 successfully reached monitoredBarrier, but received errors while waiting for send/recv from rank 0. Please check rank 0 logs for faulty rank.
+[rank3]:[E620 12:38:56.116025530 ProcessGroupGloo.cpp:145] Rank 3 successfully reached monitoredBarrier, but received errors while waiting for send/recv from rank 0. Please check rank 0 logs for faulty rank.
+[rank2]: Traceback (most recent call last):
+[rank2]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 694, in <module>
+[rank2]:     main()
+[rank2]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 685, in main
+[rank2]:     pretrain(
+[rank2]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 494, in pretrain
+[rank2]:     iteration, num_floating_point_operations_so_far = train(
+[rank2]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 770, in train
+[rank2]:     save_checkpoint_and_time(iteration, model, optimizer,
+[rank2]:   File "/home/zs/MindSpeed-LLM/megatron/training/training.py", line 1656, in save_checkpoint_and_time
+[rank2]:     save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
+[rank2]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/checkpointing.py", line 267, in wrapper
+[rank2]:     torch.distributed.barrier()
+[rank2]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/tasks/high_availability/communication_patch.py", line 33, in wrapper
+[rank2]:     return fn(*args, **kwargs)
+[rank2]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank2]:     return func(*args, **kwargs)
+[rank2]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py", line 4635, in barrier
+[rank2]:     work = group.barrier(opts=opts)
+[rank2]: RuntimeError: Rank 2 successfully reached monitoredBarrier, but received errors while waiting for send/recv from rank 0. Please check rank 0 logs for faulty rank.
+[rank2]:  Original exception: 
+[rank2]: [/pytorch/third_party/gloo/gloo/transport/tcp/pair.cc:534] Connection closed by peer [fe80::aedc:caff:fe66:9272]:4771
+[rank4]: Traceback (most recent call last):
+[rank4]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 694, in <module>
+[rank4]:     main()
+[rank4]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 685, in main
+[rank4]:     pretrain(
+[rank4]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 494, in pretrain
+[rank4]:     iteration, num_floating_point_operations_so_far = train(
+[rank4]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 770, in train
+[rank4]:     save_checkpoint_and_time(iteration, model, optimizer,
+[rank4]:   File "/home/zs/MindSpeed-LLM/megatron/training/training.py", line 1656, in save_checkpoint_and_time
+[rank4]:     save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
+[rank4]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/checkpointing.py", line 267, in wrapper
+[rank4]:     torch.distributed.barrier()
+[rank4]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/tasks/high_availability/communication_patch.py", line 33, in wrapper
+[rank4]:     return fn(*args, **kwargs)
+[rank4]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank4]:     return func(*args, **kwargs)
+[rank4]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py", line 4635, in barrier
+[rank4]:     work = group.barrier(opts=opts)
+[rank4]: RuntimeError: Rank 4 successfully reached monitoredBarrier, but received errors while waiting for send/recv from rank 0. Please check rank 0 logs for faulty rank.
+[rank4]:  Original exception: 
+[rank4]: [/pytorch/third_party/gloo/gloo/transport/tcp/pair.cc:534] Connection closed by peer [fe80::aedc:caff:fe66:9272]:4319
+[rank3]: Traceback (most recent call last):
+[rank3]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 694, in <module>
+[rank3]:     main()
+[rank3]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 685, in main
+[rank3]:     pretrain(
+[rank3]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 494, in pretrain
+[rank3]:     iteration, num_floating_point_operations_so_far = train(
+[rank3]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 770, in train
+[rank3]:     save_checkpoint_and_time(iteration, model, optimizer,
+[rank3]:   File "/home/zs/MindSpeed-LLM/megatron/training/training.py", line 1656, in save_checkpoint_and_time
+[rank3]:     save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
+[rank3]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/checkpointing.py", line 267, in wrapper
+[rank3]:     torch.distributed.barrier()
+[rank3]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/tasks/high_availability/communication_patch.py", line 33, in wrapper
+[rank3]:     return fn(*args, **kwargs)
+[rank3]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank3]:     return func(*args, **kwargs)
+[rank3]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py", line 4635, in barrier
+[rank3]:     work = group.barrier(opts=opts)
+[rank3]: RuntimeError: Rank 3 successfully reached monitoredBarrier, but received errors while waiting for send/recv from rank 0. Please check rank 0 logs for faulty rank.
+[rank3]:  Original exception: 
+[rank3]: [/pytorch/third_party/gloo/gloo/transport/tcp/pair.cc:534] Connection closed by peer [fe80::aedc:caff:fe66:9272]:38038
+[rank5]: Traceback (most recent call last):
+[rank5]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 694, in <module>
+[rank5]:     main()
+[rank5]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 685, in main
+[rank5]:     pretrain(
+[rank5]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 494, in pretrain
+[rank5]:     iteration, num_floating_point_operations_so_far = train(
+[rank5]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 770, in train
+[rank5]:     save_checkpoint_and_time(iteration, model, optimizer,
+[rank5]:   File "/home/zs/MindSpeed-LLM/megatron/training/training.py", line 1656, in save_checkpoint_and_time
+[rank5]:     save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
+[rank5]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/checkpointing.py", line 267, in wrapper
+[rank5]:     torch.distributed.barrier()
+[rank5]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/tasks/high_availability/communication_patch.py", line 33, in wrapper
+[rank5]:     return fn(*args, **kwargs)
+[rank5]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank5]:     return func(*args, **kwargs)
+[rank5]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py", line 4635, in barrier
+[rank5]:     work = group.barrier(opts=opts)
+[rank5]: RuntimeError: Rank 5 successfully reached monitoredBarrier, but received errors while waiting for send/recv from rank 0. Please check rank 0 logs for faulty rank.
+[rank5]:  Original exception: 
+[rank5]: [/pytorch/third_party/gloo/gloo/transport/tcp/pair.cc:534] Connection closed by peer [fe80::aedc:caff:fe66:9272]:11437
+[rank5]: Traceback (most recent call last):
+[rank5]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 694, in <module>
+[rank5]:     main()
+[rank5]:   File "/home/zs/MindSpeed-LLM/pretrain_gpt.py", line 685, in main
+[rank5]:     pretrain(
+[rank5]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 494, in pretrain
+[rank5]:     iteration, num_floating_point_operations_so_far = train(
+[rank5]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/training.py", line 770, in train
+[rank5]:     save_checkpoint_and_time(iteration, model, optimizer,
+[rank5]:   File "/home/zs/MindSpeed-LLM/megatron/training/training.py", line 1656, in save_checkpoint_and_time
+[rank5]:     save_checkpoint(iteration, model, optimizer, opt_param_scheduler,
+[rank5]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/training/checkpointing.py", line 267, in wrapper
+[rank5]:     torch.distributed.barrier()
+[rank5]:   File "/home/zs/MindSpeed-LLM/mindspeed_llm/tasks/high_availability/communication_patch.py", line 33, in wrapper
+[rank5]:     return fn(*args, **kwargs)
+[rank5]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank5]:     return func(*args, **kwargs)
+[rank5]:   File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/distributed_c10d.py", line 4635, in barrier
+[rank5]:     work = group.barrier(opts=opts)
+[rank5]: RuntimeError: Rank 5 successfully reached monitoredBarrier, but received errors while waiting for send/recv from rank 0. Please check rank 0 logs for faulty rank.
+[rank5]:  Original exception: 
+[rank5]: [/pytorch/third_party/gloo/gloo/transport/tcp/pair.cc:534] Connection closed by peer [fe80::aedc:caff:fe66:9272]:11437
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+[ERROR] 2026-06-20-12:38:57 (PID:29668, Device:2, RankID:-1) ERR99999 UNKNOWN applicaiton exception
+[ERROR] 2026-06-20-12:38:57 (PID:29670, Device:4, RankID:-1) ERR99999 UNKNOWN applicaiton exception
+[ERROR] 2026-06-20-12:38:58 (PID:29669, Device:3, RankID:-1) ERR99999 UNKNOWN applicaiton exception
 sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
 sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
 sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
-sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
-sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
-sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+wandb: 
+wandb: 🚀 View run qwen25-7b-mean-bias-a4-v2 at: https://wandb.ai/shuo01430-tianjin-university/metis-qwen25/runs/nunukdg9
+wandb: Find logs at: examples/mcore/qwen25/logs/wandb/wandb/run-20260620_121951-nunukdg9/logs
+[ERROR] 2026-06-20-12:39:00 (PID:29671, Device:5, RankID:-1) ERR99999 UNKNOWN applicaiton exception
+W0620 12:39:01.588000 29337 site-packages/torch/distributed/elastic/multiprocessing/api.py:900] Sending process 29667 closing signal SIGTERM
+W0620 12:39:01.591000 29337 site-packages/torch/distributed/elastic/multiprocessing/api.py:900] Sending process 29668 closing signal SIGTERM
+W0620 12:39:01.592000 29337 site-packages/torch/distributed/elastic/multiprocessing/api.py:900] Sending process 29669 closing signal SIGTERM
+W0620 12:39:01.592000 29337 site-packages/torch/distributed/elastic/multiprocessing/api.py:900] Sending process 29670 closing signal SIGTERM
+W0620 12:39:01.592000 29337 site-packages/torch/distributed/elastic/multiprocessing/api.py:900] Sending process 29671 closing signal SIGTERM
+E0620 12:39:02.301000 29337 site-packages/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 1) local_rank: 0 (pid: 29666) of binary: /root/miniconda3/envs/qwen/bin/python3.10
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/qwen/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/root/miniconda3/envs/qwen/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/run.py", line 896, in <module>
+    main()
+  File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+  File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+  File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/root/miniconda3/envs/qwen/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 270, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+pretrain_gpt.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-06-20_12:39:01
+  host      : hostname-cjheq.foreman.pxe
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 29666)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+[ERROR] 2026-06-20-12:39:44 (PID:29337, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception

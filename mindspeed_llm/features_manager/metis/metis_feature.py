@@ -38,6 +38,89 @@ from mindspeed_llm.features_manager.metis.quant_impl import (
 
 
 # ---------------------------------------------------------------------------
+# Forward W4A4 patch state
+# ---------------------------------------------------------------------------
+# Metis paper specifies W4A4G4: weights, activations AND gradients are FP4
+# quantized. The optimizer hooks above cover G4 (gradient quantization). The
+# forward patch below covers W4 (weight) and A4 (activation) by patching
+# ``torch.nn.functional.linear``: every 2-D GeMM routes the weight and
+# activation through Metis spectral-split FP4 quantization (STE). Weight
+# subspaces are reused from the cached ``_metis_name`` -> U map refreshed in
+# ``train_step``; activations use the online randomized-SVD path.
+_FORWARD_STATE = {
+    'enabled': False,
+    'orig_linear': None,
+    'block_size': 16,
+    'min_numel': 1024,
+    'rank_frac': 0.015,
+    'sample_ratio': 0.01,
+    'qdtype': 'fp4',
+}
+
+
+def _metis_ste_quantize(tensor, quantize_fn):
+    """Straight-through estimator: forward = quantize, backward = identity."""
+    with torch.no_grad():
+        q = quantize_fn(tensor)
+    return tensor + (q - tensor).detach()
+
+
+def _metis_quantize_weight(weight):
+    """W4: use cached subspace if available, else online spectral split."""
+    name = getattr(weight, '_metis_name', None)
+    U = None
+    if name:
+        gargs = _get_global_args()
+        if gargs and getattr(gargs, 'metis', False):
+            st = _get_metis_state(gargs)
+            entry = st['subspaces'].get(name)
+            if isinstance(entry, dict):
+                U = entry.get('U')
+    bs = _FORWARD_STATE['block_size']
+    qd = _FORWARD_STATE['qdtype']
+    if U is not None:
+        return metis_quantize_with_subspace(weight, U, qdtype=qd, block_size=bs)
+    return apply_metis_quantization(
+        weight, rank_frac=_FORWARD_STATE['rank_frac'],
+        block_size=bs, sample_ratio=_FORWARD_STATE['sample_ratio'], qdtype=qd)
+
+
+def _metis_quantize_activation(activation):
+    """A4: spectral split + blockwise FP4 (faithful to Metis paper §3.2).
+
+    The Metis paper applies spectral decomposition to weights, activations, AND
+    gradients — all GeMM matrices in forward and backward are FP4-quantized
+    via the spectral-split path. We do NOT shortcut activations to plain
+    blockwise FP4; we follow the paper's ``apply_metis_quantization``:
+    sparsely-random-sampled randomized SVD → (low_rank, residual) →
+    independent blockwise FP4 of each part.
+    """
+    return apply_metis_quantization(
+        activation, rank_frac=_FORWARD_STATE['rank_frac'],
+        block_size=_FORWARD_STATE['block_size'],
+        sample_ratio=_FORWARD_STATE['sample_ratio'],
+        qdtype=_FORWARD_STATE['qdtype'])
+
+
+def _metis_forward_linear(input, weight, bias=None):
+    """Patched ``F.linear`` applying Metis W4A4 spectral FP4 quantization."""
+    if not _FORWARD_STATE['enabled']:
+        return _FORWARD_STATE['orig_linear'](input, weight, bias)
+    # Only quantize 2-D (token x hidden) GeMMs above the min-size threshold.
+    if (input.ndim != 2 or weight.ndim != 2
+            or input.numel() < _FORWARD_STATE['min_numel']
+            or weight.numel() < _FORWARD_STATE['min_numel']):
+        return _FORWARD_STATE['orig_linear'](input, weight, bias)
+    try:
+        Wq = _metis_ste_quantize(weight, _metis_quantize_weight)
+        Aq = _metis_ste_quantize(input, _metis_quantize_activation)
+        return _FORWARD_STATE['orig_linear'](Aq, Wq, bias)
+    except Exception:
+        # Fall back to the unquantized path on any numerical issue.
+        return _FORWARD_STATE['orig_linear'](input, weight, bias)
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -150,6 +233,9 @@ class MetisFeature(MindSpeedFeature):
             return
 
         # ---- prepare_grads: quantize gradients (with subspace if cached) ----
+        # NOTE: FP4 simulation creates large float32 intermediates (U @ (U.T @ M))
+        # which can OOM on NPU. We move grads to CPU for quantization, then move
+        # the quantized result back to the original device.
         def prepare_grads_wrapper(orig_func):
             def wrapper(self, *a, **k):
                 out = orig_func(self, *a, **k)
@@ -168,9 +254,12 @@ class MetisFeature(MindSpeedFeature):
                         try:
                             pname = _param_name_for(p)
                             entry = subspaces.get(pname)
-                            U = entry['U'].to(p.grad.device, dtype=torch.float32) if entry else None
-                            q_grad = _quantize_grad(p.grad.data, qdtype, block_size, U=U)
-                            # Preserve dtype/device of the original grad.
+                            U = entry['U'] if entry else None
+                            # 直接在 NPU 上量化，避免 PCIe 传输开销
+                            grad = p.grad.data.detach().to(torch.float32)
+                            if U is not None and U.device != grad.device:
+                                U = U.to(grad.device)
+                            q_grad = _quantize_grad(grad, qdtype, block_size, U=U)
                             p.grad.data = q_grad.to(p.grad.dtype)
                         except Exception as e:
                             # Log once per failure type but don't crash training.
@@ -273,7 +362,8 @@ class MetisFeature(MindSpeedFeature):
 
                 for name, param in candidates:
                     try:
-                        w = param.detach().to(torch.float32).cpu()
+                        # 保持在 NPU 上计算，避免 CPU 传输开销
+                        w = param.detach().to(torch.float32)
                         entry = {'name': name, 'shape': list(w.shape)}
 
                         if need_subspace_update:
@@ -289,17 +379,19 @@ class MetisFeature(MindSpeedFeature):
                             entry['subspace_updated'] = False
 
                         if need_log:
-                            entry['weight_spectrum'] = spectrum_stats(w)
+                            # logging 需要搬到 CPU 做序列化
+                            w_cpu = w.cpu()
+                            entry['weight_spectrum'] = spectrum_stats(w_cpu)
                             qdtype_eff = qdtype
                             U = subspaces.get(name, {}).get('U')
                             if U is not None:
                                 q_w = metis_quantize_with_subspace(
-                                    w, U, qdtype=qdtype_eff, block_size=block_size)
+                                    w_cpu, U.cpu(), qdtype=qdtype_eff, block_size=block_size)
                             else:
-                                q_w = quantize_blockwise(w, qdtype=qdtype_eff,
+                                q_w = quantize_blockwise(w_cpu, qdtype=qdtype_eff,
                                                          block_size=block_size)
                             entry['quantized_spectrum'] = spectrum_stats(q_w)
-                            err = (w - q_w).norm().item() / max(w.norm().item(), 1e-8)
+                            err = (w_cpu - q_w).norm().item() / max(w_cpu.norm().item(), 1e-8)
                             entry['quant_rel_error'] = err
                         results[name] = entry
                     except Exception:
@@ -379,3 +471,20 @@ class MetisFeature(MindSpeedFeature):
         patch_manager.register_patch(
             'megatron.core.optimizer.optimizer.MixedPrecisionOptimizer.load_state_dict',
             load_state_dict_wrapper, force_patch=False)
+
+        # ---- forward W4A4: patch F.linear for spectral FP4 quantization ----
+        # Metis is W4A4G4 (paper §3): weights and activations must also be
+        # FP4-quantized in the forward pass, not only gradients. The optimizer
+        # hooks above handle G4; this patch adds W4 + A4.
+        import torch.nn.functional as _F
+        if _FORWARD_STATE['orig_linear'] is None:
+            _FORWARD_STATE['orig_linear'] = _F.linear
+        gargs_fwd = _get_global_args()
+        if gargs_fwd is not None:
+            _FORWARD_STATE['block_size'] = int(getattr(gargs_fwd, 'metis_block_size', 16) or 16)
+            _FORWARD_STATE['min_numel'] = int(getattr(gargs_fwd, 'metis_min_numel', 1024) or 1024)
+            _FORWARD_STATE['rank_frac'] = float(getattr(gargs_fwd, 'metis_rank_frac', 0.015) or 0.015)
+            _FORWARD_STATE['sample_ratio'] = float(getattr(gargs_fwd, 'metis_sample_ratio', 0.01) or 0.01)
+            _FORWARD_STATE['qdtype'] = getattr(gargs_fwd, 'metis_qdtype', 'fp4') or 'fp4'
+        _FORWARD_STATE['enabled'] = True
+        torch.nn.functional.linear = _metis_forward_linear

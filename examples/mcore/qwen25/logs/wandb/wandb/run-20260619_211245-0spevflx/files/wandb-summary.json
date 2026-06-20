@@ -1,0 +1,1 @@
+{"loss-scale":1,"learning-rate":1.2952541794675199e-07,"_timestamp":1.7819164021861734e+09,"lm loss":4.246865272521973,"grad-norm":4.8096208572387695,"_step":960,"_wandb":{"runtime":41640},"_runtime":41640.30550762,"samples vs steps":63360,"num-zeros":0,"batch-size":66}

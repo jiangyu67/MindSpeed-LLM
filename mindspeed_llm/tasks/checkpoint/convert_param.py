@@ -751,14 +751,31 @@ class ConvertMg2Hf(ConvertBase):
 
     def _update_hf_model_file(self, hf_model, model_file):
         file_path = os.path.join(self.args_cmd.hf_dir, model_file)
-        exist_model = torch.load(file_path, map_location='cpu', weights_only=False) if os.path.exists(file_path) else {}
+        if os.path.exists(file_path):
+            if str(model_file).endswith(".safetensors"):
+                from safetensors import safe_open
+                exist_model = {}
+                with safe_open(file_path, framework="pt") as f:
+                    for k in f.keys():
+                        exist_model[k] = f.get_tensor(k)
+            else:
+                exist_model = torch.load(file_path, map_location='cpu', weights_only=False)
+        else:
+            exist_model = {}
 
         for param_key in hf_model.keys():
             if self.get_hf_model_file_based_param_key(param_key) == model_file:
                 exist_model[param_key] = hf_model[param_key]
 
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        torch.save(exist_model, file_path)
+        # 根据 model_file 后缀选择保存格式
+        if str(model_file).endswith(".safetensors"):
+            from safetensors.torch import save_file
+            # 转为 contiguous 避免 safetensors 报错，加 metadata 告诉 transformers 是 pytorch 格式
+            save_file({k: v.contiguous() for k, v in exist_model.items()}, file_path,
+                      metadata={"format": "pt"})
+        else:
+            torch.save(exist_model, file_path)
 
     def run(self):
         print(f"tp_size : {self.tp_size}, pp_size : {self.pp_size}, vpp_size : {self.vpp_size}")

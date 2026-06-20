@@ -1,4 +1,7 @@
 #!/bin/bash
+# Metis FP4 W4A4G4 续训（从 iter_0000940 继续）
+# 与原始脚本的区别：去掉 --no-load-optim/--no-load-rng/--no-save-optim/--no-save-rng，
+# 框架会自动从 --save 目录加载最新 checkpoint（iter_0000940）继续训练。
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 source /usr/local/Ascend/cann/set_env.sh
 source /usr/local/Ascend/nnal/atb/set_env.sh
@@ -18,8 +21,8 @@ WORLD_SIZE=$(($NPUS_PER_NODE * $NNODES))
 TRAIN_ITERS=1000
 
 
-CKPT_LOAD_DIR="/home/zs/ckpt/qwen25-7b"
-CKPT_SAVE_DIR="/home/zs/ckpt/qwen25-7b-bf16-baseline"
+CKPT_LOAD_DIR="/home/zs/ckpt/qwen25-7b-metis-w4a4g4"
+CKPT_SAVE_DIR="/home/zs/ckpt/qwen25-7b-metis-w4a4g4"
 DATA_PATH="/home/zs/dataset/alpaca_text_document"
 TOKENIZER_PATH="/home/zs/model_from_hf/qwen2.5-7b-hf/"
 
@@ -86,6 +89,14 @@ GPT_ARGS="
     --attention-softmax-in-fp32 \
     --bf16 \
     --use-distributed-optimizer \
+    --metis \
+    --metis-quant-dtype fp4 \
+    --metis-rank-frac 0.015 \
+    --metis-block-size 16 \
+    --metis-sample-ratio 0.01 \
+    --metis-update-freq 100 \
+    --metis-log-freq 100 \
+    --metis-output-dir /home/zs/metis/output
 "
 
 DATA_ARGS="
@@ -93,11 +104,15 @@ DATA_ARGS="
     --split 100,0,0
 "
 
+# 续训关键：
+# 1. 显式指定 --load 指向已有 checkpoint 目录，框架会自动加载最新 iter（iter_0000940）
+# 2. 保留 --no-load-optim / --no-load-rng：原 checkpoint 用 --no-save-optim/--no-save-rng 保存，
+#    里面没有 optimizer/RNG 状态，必须跳过加载，否则报 KeyError
+# 3. 去掉 --no-save-optim / --no-save-rng：让后续 checkpoint 保存完整 optimizer/RNG 状态
 CKPT_ARGS="
+    --load ${CKPT_LOAD_DIR} \
     --no-load-optim \
     --no-load-rng \
-    --no-save-optim \
-    --no-save-rng \
     --seed 1234 \
     --save ${CKPT_SAVE_DIR}
 "
@@ -111,29 +126,17 @@ OUTPUT_ARGS="
     --tensorboard-dir /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/tensorboard \
     --use-wandb \
     --wandb-project metis-qwen25 \
-    --wandb-exp-name qwen25-7b-bf16-baseline \
+    --wandb-exp-name qwen25-7b-metis-w4a4g4-resume \
     --wandb-save-dir /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/wandb
 "
 
 mkdir -p /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs
-mkdir -p /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/activation_probe
 mkdir -p /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/tensorboard
 mkdir -p /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/wandb
-
-# ---- activation probe（bf16 baseline 注释掉，无需离群值分析）----
-# export ACTIVATION_PROBE_ENABLE=1
-# export ACTIVATION_PROBE_DIR=/home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/activation_probe
-# export ACTIVATION_PROBE_FIRST_N=2
-# export ACTIVATION_PROBE_LAST_N=2
-# export ACTIVATION_PROBE_ITERS=4700,4701,4702,4703
-# export ACTIVATION_PROBE_SAVE_VALUES=1
-# export ACTIVATION_PROBE_SAMPLE_SIZE=200000
-# export ACTIVATION_PROBE_BINS=201
-# export ACTIVATION_PROBE_THRESHOLDS=6,8,10,20,50,100
-
-
+mkdir -p /home/zs/metis/output
 
 echo "START_TIME: $(date '+%F %T')"
+echo "Resuming metis training from iter_0000940, target: ${TRAIN_ITERS} iters"
 
 # 切换到仓库根目录，确保 pretrain_gpt.py 可被找到
 cd /home/zs/MindSpeed-LLM
@@ -145,7 +148,14 @@ python3.10 -m torch.distributed.run $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --transformer-impl local \
-    2>&1 | tee examples/mcore/qwen25/logs/pretrain_mcore_qwen25_7b_bf16_baseline.log
+    2>&1 | tee examples/mcore/qwen25/logs/pretrain_mcore_qwen25_7b_metis_w4a4g4_resume.log
 
 exit_code=${PIPESTATUS[0]}
 
+if [ ${exit_code} -ne 0 ]; then
+    echo "ERROR: training failed with exit code ${exit_code}"
+    exit ${exit_code}
+fi
+
+echo "END_TIME: $(date '+%F %T')"
+echo "Training completed successfully."

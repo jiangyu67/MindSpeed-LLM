@@ -89,6 +89,7 @@ from mindspeed_llm.features_manager.arguments.deprecated_args import DeprecatedA
 from mindspeed_llm.features_manager.convert_checkpoint.convert_checkpoint import CheckpointFeature
 from mindspeed_llm.features_manager.memory.chunk_loss import ChunkLossFeature
 from mindspeed_llm.features_manager.metis.metis_feature import MetisFeature
+from mindspeed_llm.features_manager.mean_bias.mean_bias_feature import MeanBiasFeature
 
 
 FEATURES_LIST = [
@@ -100,6 +101,7 @@ FEATURES_LIST = [
     TrainingDefaultFeature(),
     DataFeature(),
     MetisFeature(),
+    MeanBiasFeature(),
     LoraFeature(),
     DisableGlooGroupFeature(),
     RotaryPositionEmbeddingFeature(),
@@ -141,6 +143,7 @@ def add_llm_features(features_list: List[MindSpeedFeature]):
         LanguageModelEmbeddingFeature(),
         CheckpointFeature(),
         MetisFeature(),
+        MeanBiasFeature(),
     ])
 
 

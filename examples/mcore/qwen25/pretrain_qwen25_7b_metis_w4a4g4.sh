@@ -1,25 +1,31 @@
 #!/bin/bash
+# Metis FP4 W4A4G4 量化训练（arXiv:2509.00404）
+# 权重 W4（spectral split + FP4，用缓存 subspace）、激活 A4（blockwise FP4）、
+# 梯度 G4（optimizer hook spectral split + FP4）。
+# 从头训练 800 iter，与 bf16 baseline / mean-bias 对比。探针关闭。
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 source /usr/local/Ascend/cann/set_env.sh
 source /usr/local/Ascend/nnal/atb/set_env.sh
+source /root/miniconda3/etc/profile.d/conda.sh
+conda activate qwen
 export PYTHONPATH=/home/zs/MindSpeed:/home/zs/MindSpeed-LLM:$PYTHONPATH
 export TORCH_DISTRIBUTED_DEBUG=DETAIL
 export HCCL_CONNECT_TIMEOUT=7200
 
 # 指定使用 2,3,4,5,14,15 这 6 张 NPU 卡
-export ASCEND_RT_VISIBLE_DEVICES=2,3,4,5,14,15
+export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5
 
 NPUS_PER_NODE=6
 MASTER_ADDR=localhost
-MASTER_PORT=6010
+MASTER_PORT=6020
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($NPUS_PER_NODE * $NNODES))
 TRAIN_ITERS=1000
 
 
-CKPT_LOAD_DIR="/home/zs/ckpt/qwen25-7b"
-CKPT_SAVE_DIR="/home/zs/ckpt/qwen25-7b-bf16-baseline"
+CKPT_LOAD_DIR="/home/zs/ckpt/qwen25-7b-metis-w4a4g4-v2"
+CKPT_SAVE_DIR="/home/zs/ckpt/qwen25-7b-metis-w4a4g4-v2"
 DATA_PATH="/home/zs/dataset/alpaca_text_document"
 TOKENIZER_PATH="/home/zs/model_from_hf/qwen2.5-7b-hf/"
 
@@ -86,6 +92,14 @@ GPT_ARGS="
     --attention-softmax-in-fp32 \
     --bf16 \
     --use-distributed-optimizer \
+    --metis \
+    --metis-quant-dtype fp4 \
+    --metis-rank-frac 0.015 \
+    --metis-block-size 16 \
+    --metis-sample-ratio 0.01 \
+    --metis-update-freq 100 \
+    --metis-log-freq 100 \
+    --metis-output-dir /home/zs/metis/output
 "
 
 DATA_ARGS="
@@ -94,10 +108,7 @@ DATA_ARGS="
 "
 
 CKPT_ARGS="
-    --no-load-optim \
-    --no-load-rng \
-    --no-save-optim \
-    --no-save-rng \
+    --load ${CKPT_LOAD_DIR} \
     --seed 1234 \
     --save ${CKPT_SAVE_DIR}
 "
@@ -111,41 +122,38 @@ OUTPUT_ARGS="
     --tensorboard-dir /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/tensorboard \
     --use-wandb \
     --wandb-project metis-qwen25 \
-    --wandb-exp-name qwen25-7b-bf16-baseline \
+    --wandb-exp-name qwen25-7b-metis-w4a4g4-v2 \
     --wandb-save-dir /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/wandb
 "
 
 mkdir -p /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs
-mkdir -p /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/activation_probe
 mkdir -p /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/tensorboard
 mkdir -p /home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/wandb
+mkdir -p /home/zs/metis/output
 
-# ---- activation probe（bf16 baseline 注释掉，无需离群值分析）----
-# export ACTIVATION_PROBE_ENABLE=1
-# export ACTIVATION_PROBE_DIR=/home/zs/MindSpeed-LLM/examples/mcore/qwen25/logs/activation_probe
-# export ACTIVATION_PROBE_FIRST_N=2
-# export ACTIVATION_PROBE_LAST_N=2
-# export ACTIVATION_PROBE_ITERS=4700,4701,4702,4703
-# export ACTIVATION_PROBE_SAVE_VALUES=1
-# export ACTIVATION_PROBE_SAMPLE_SIZE=200000
-# export ACTIVATION_PROBE_BINS=201
-# export ACTIVATION_PROBE_THRESHOLDS=6,8,10,20,50,100
-
-
+# ---- activation probe 关闭（metis 训练不采集探针，避免 IO 拖慢）----
+# export ACTIVATION_PROBE_ENABLE=0
 
 echo "START_TIME: $(date '+%F %T')"
 
 # 切换到仓库根目录，确保 pretrain_gpt.py 可被找到
 cd /home/zs/MindSpeed-LLM
 
-python3.10 -m torch.distributed.run $DISTRIBUTED_ARGS pretrain_gpt.py \
+/root/miniconda3/envs/qwen/bin/python3.10 -m torch.distributed.run $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $CKPT_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --transformer-impl local \
-    2>&1 | tee examples/mcore/qwen25/logs/pretrain_mcore_qwen25_7b_bf16_baseline.log
+    2>&1 | tee examples/mcore/qwen25/logs/pretrain_mcore_qwen25_7b_metis_w4a4g4_v2.log
 
 exit_code=${PIPESTATUS[0]}
 
+if [ ${exit_code} -ne 0 ]; then
+    echo "ERROR: training failed with exit code ${exit_code}"
+    exit ${exit_code}
+fi
+
+echo "END_TIME: $(date '+%F %T')"
+echo "Training completed successfully."
